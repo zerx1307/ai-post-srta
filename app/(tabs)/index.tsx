@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Bell, Calendar, Camera, TrendingUp, Heart, Clock, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, MessageCircle, Plus } from 'lucide-react-native';
+import { Bell, Calendar, Camera, TrendingUp, Heart, Clock, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, MessageCircle, Plus, Award, Activity, Zap } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -20,7 +21,11 @@ export default function HomeTab() {
   const [daysSinceSurgery, setDaysSinceSurgery] = useState(7);
   const [healingScore, setHealingScore] = useState(8.2);
   const [nextAppointment, setNextAppointment] = useState('Tomorrow at 2:00 PM');
-  const [isNewUser, setIsNewUser] = useState(false); // This would come from your user state
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [streakDays, setStreakDays] = useState(5);
+  const [weeklyGoal, setWeeklyGoal] = useState(85);
+  const [currentProgress, setCurrentProgress] = useState(72);
 
   const quickActions = [
     {
@@ -47,15 +52,31 @@ export default function HomeTab() {
   ];
 
   const todaysTasks = [
-    { task: 'Take morning medication', completed: true },
-    { task: 'Upload wound photo', completed: false },
-    { task: 'Light walking (10 minutes)', completed: false },
-    { task: 'Apply wound dressing', completed: true },
+    { task: 'Take morning medication', completed: true, time: '8:00 AM' },
+    { task: 'Upload wound photo', completed: false, time: '10:00 AM' },
+    { task: 'Light walking (10 minutes)', completed: false, time: '2:00 PM' },
+    { task: 'Apply wound dressing', completed: true, time: '6:00 PM' },
+    { task: 'Evening medication', completed: false, time: '8:00 PM' },
+  ];
+
+  const achievements = [
+    { title: '5-Day Streak', icon: Award, color: colors.warning, unlocked: true },
+    { title: 'Photo Consistent', icon: Camera, color: colors.info, unlocked: true },
+    { title: 'Pain Warrior', icon: Zap, color: colors.error, unlocked: false },
   ];
 
   const handleSetupProfile = () => {
     router.push('/onboarding');
   };
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    // Simulate data refresh
+    setTimeout(() => {
+      setHealingScore(8.2 + Math.random() * 0.3);
+      setRefreshing(false);
+    }, 2000);
+  }, []);
 
   const styles = createStyles(colors, isDarkMode);
 
@@ -87,7 +108,13 @@ export default function HomeTab() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       {/* Header with gradient */}
       <LinearGradient
         colors={isDarkMode ? ['#4db6ac', '#26a69a'] : ['#00695c', '#00897b']}
@@ -105,13 +132,37 @@ export default function HomeTab() {
               <Text style={styles.progressTitle}>Healing Progress</Text>
             </View>
             <View style={styles.scoreContainer}>
-              <Text style={styles.healingScore}>{healingScore}</Text>
+              <Text style={styles.healingScore}>{healingScore.toFixed(1)}</Text>
               <Text style={styles.scoreMax}>/10</Text>
             </View>
             <Text style={styles.scoreLabel}>Excellent Recovery!</Text>
+            
+            {/* Progress Ring */}
+            <View style={styles.progressRing}>
+              <View style={[styles.progressFill, { width: `${(healingScore / 10) * 100}%` }]} />
+            </View>
           </View>
         </View>
       </LinearGradient>
+
+      {/* Stats Row */}
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Activity color={colors.success} size={20} />
+          <Text style={styles.statNumber}>{streakDays}</Text>
+          <Text style={styles.statLabel}>Day Streak</Text>
+        </View>
+        <View style={styles.statCard}>
+          <TrendingUp color={colors.info} size={20} />
+          <Text style={styles.statNumber}>{currentProgress}%</Text>
+          <Text style={styles.statLabel}>Weekly Goal</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Clock color={colors.warning} size={20} />
+          <Text style={styles.statNumber}>3</Text>
+          <Text style={styles.statLabel}>Tasks Left</Text>
+        </View>
+      </View>
 
       {/* Quick Actions */}
       <View style={styles.section}>
@@ -135,7 +186,12 @@ export default function HomeTab() {
 
       {/* Today's Tasks */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Tasks</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Today's Tasks</Text>
+          <Text style={styles.taskProgress}>
+            {todaysTasks.filter(task => task.completed).length}/{todaysTasks.length}
+          </Text>
+        </View>
         <View style={styles.tasksContainer}>
           {todaysTasks.map((task, index) => (
             <View key={index} style={styles.taskItem}>
@@ -145,13 +201,33 @@ export default function HomeTab() {
                 ) : (
                   <View style={styles.taskCircle} />
                 )}
-                <Text style={[styles.taskText, task.completed && styles.completedTask]}>
-                  {task.task}
-                </Text>
+                <View style={styles.taskInfo}>
+                  <Text style={[styles.taskText, task.completed && styles.completedTask]}>
+                    {task.task}
+                  </Text>
+                  <Text style={styles.taskTime}>{task.time}</Text>
+                </View>
               </View>
             </View>
           ))}
         </View>
+      </View>
+
+      {/* Achievements */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Achievements</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.achievementsScroll}>
+          {achievements.map((achievement, index) => (
+            <View key={index} style={[styles.achievementCard, !achievement.unlocked && styles.lockedAchievement]}>
+              <View style={[styles.achievementIcon, { backgroundColor: achievement.unlocked ? achievement.color : colors.border }]}>
+                <achievement.icon color="#ffffff" size={16} />
+              </View>
+              <Text style={[styles.achievementTitle, !achievement.unlocked && styles.lockedText]}>
+                {achievement.title}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
       </View>
 
       {/* Upcoming */}
@@ -165,6 +241,9 @@ export default function HomeTab() {
             <Text style={styles.reminderTitle}>Next Appointment</Text>
             <Text style={styles.reminderSubtitle}>{nextAppointment}</Text>
           </View>
+          <TouchableOpacity style={styles.reminderAction}>
+            <Text style={styles.reminderActionText}>View</Text>
+          </TouchableOpacity>
         </View>
         
         <View style={styles.reminderCard}>
@@ -175,6 +254,9 @@ export default function HomeTab() {
             <Text style={styles.reminderTitle}>Medication Reminder</Text>
             <Text style={styles.reminderSubtitle}>Pain medication in 2 hours</Text>
           </View>
+          <TouchableOpacity style={styles.reminderAction}>
+            <Text style={styles.reminderActionText}>Set</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -308,15 +390,68 @@ const createStyles = (colors: any, isDarkMode: boolean) => StyleSheet.create({
     fontSize: 16,
     color: colors.success,
     fontWeight: '600',
+    marginBottom: 16,
+  },
+  progressRing: {
+    width: '100%',
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 3,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   section: {
     padding: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 16,
+  },
+  taskProgress: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
   },
   actionsGrid: {
     flexDirection: 'row',
@@ -378,14 +513,57 @@ const createStyles = (colors: any, isDarkMode: boolean) => StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
   },
-  taskText: {
-    fontSize: 16,
-    color: colors.text,
+  taskInfo: {
     marginLeft: 12,
     flex: 1,
   },
+  taskText: {
+    fontSize: 16,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  taskTime: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
   completedTask: {
     textDecorationLine: 'line-through',
+    color: colors.textSecondary,
+  },
+  achievementsScroll: {
+    paddingLeft: 0,
+  },
+  achievementCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    marginRight: 12,
+    minWidth: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  lockedAchievement: {
+    opacity: 0.6,
+  },
+  achievementIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  achievementTitle: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  lockedText: {
     color: colors.textSecondary,
   },
   reminderCard: {
@@ -422,6 +600,17 @@ const createStyles = (colors: any, isDarkMode: boolean) => StyleSheet.create({
   reminderSubtitle: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  reminderAction: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  reminderActionText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   tipCard: {
     backgroundColor: isDarkMode ? 'rgba(77, 182, 172, 0.1)' : '#e8f5e8',
