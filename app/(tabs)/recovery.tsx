@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar, CircleCheck as CheckCircle2, Clock, Target, TrendingUp, Activity, Heart, Pill, Plus, X, Edit3 } from 'lucide-react-native';
+import { Calendar, CircleCheck as CheckCircle2, Clock, Target, TrendingUp, Activity, Heart, Pill, Plus, X, CreditCard as Edit3 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface RecoveryTask {
